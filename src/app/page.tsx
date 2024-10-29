@@ -1,39 +1,55 @@
 import Image from "next/image";
 import { HomeContainer, Product } from "./home/page";
-
+import { stripe } from "../lib/stripe";
 import camiseta1 from '../assets/camisetas/1.png'
 import camiseta2 from '../assets/camisetas/2.png'
 import camiseta3 from '../assets/camisetas/3.png'
+import Stripe from "stripe";
 
-export default function Home() {
+
+async function getProducts() {
+  const response = await stripe.products.list({
+    expand: ['data.default_price']
+  })
+
+  const products = response.data.map(product => {
+    const price = product.default_price as Stripe.Price
+
+    return {
+      id: product.id,
+      name: product.name,
+      imageUrl: product.images[0],
+      url: product.url,
+      price: price?.unit_amount ? price.unit_amount/100 : 0
+    }
+  })
+
+  return products
+}
+
+export default async function Home() {
+  const products = await getProducts()
+
   return (
     <HomeContainer>
-      <Product>
-        <Image 
-          src={camiseta1} 
-          alt=""
-          fill
-          className="object-contain"
-          priority
-        />
-        <footer>
-          <strong>Camiseta X</strong>
-          <span>R$79,90</span>
-        </footer>
-      </Product>
-      <Product>
-        <Image 
-          src={camiseta2}
-          alt=""
-          fill
-          className="object-contain"
-          priority
-        />
-        <footer className="absolute bottom-[0.25rem] left-[0.25rem] right-[0.25rem] rounded-sm flex align-middle justify-between bg-(rgba(0,0,0,0.6)) ">
-          <strong>Camiseta Y</strong>
-          <span>R$79,90</span>
-        </footer>
-      </Product>
+       {products.map(product => {
+        return(
+          <Product key={product.id}>
+            <Image 
+              src={product.imageUrl} 
+              alt=""
+              fill
+              className="object-contain"
+              priority
+            />
+            <footer>
+              <strong>{product.name}</strong>
+              <span>{product.price}</span>
+            </footer>
+          </Product>
+        )
+       })}
     </HomeContainer>
   );
 }
+
